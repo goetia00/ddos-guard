@@ -1,0 +1,23 @@
+[Unit]
+Description=DDoS Protection Guard
+Documentation=https://github.com/goetia00/ddos-guard
+After=network.target iptables.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ddos-guard.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log /var/run /etc/ddos-guard /etc/iptables
+
+[Install]
+WantedBy=multi-user.target
+

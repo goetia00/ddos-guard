@@ -1,0 +1,23 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Test files
+test/
+*.test
+
+# Temporary files
+*.tmp
+*.log
+
+# Don't ignore config templates (they should be in repo)
+# But ignore actual installed configs
+/etc/ddos-guard/
+
