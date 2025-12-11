@@ -11,7 +11,7 @@ DDoS Guard is a lightweight systemd service that monitors for SYN flood attacks 
 - ✅ **Three detection modes** to reduce false positives:
   - **Age-based**: Only count stuck connections (ignores fast legitimate traffic)
   - **Rate-based**: Track connection rate over time windows
-  - **Count-based**: Simple threshold (original behavior)
+  - **Count-based**: Simple threshold
 - ✅ **Per-IP rate limiting** to catch single-source attacks early
 - ✅ **Enhanced logging** with detection reasons for each block
 - ✅ Automatic SYN flood detection via `ss` command
@@ -190,9 +190,9 @@ THRESHOLD=50
 PER_IP_RATE_LIMIT=50
 ```
 
-### For Obvious Attacks (like the 138.121.x scenario)
+### For Obvious Attacks
 ```bash
-DETECTION_MODE="count"  # Fast and simple
+DETECTION_MODE="count"
 THRESHOLD=10
 PER_IP_RATE_LIMIT=20
 ```
@@ -312,35 +312,6 @@ sudo systemctl restart ddos-guard
 - Sudden burst of 100 connections/second = likely attack
 - Steady 100 connections over 60 seconds = likely legitimate
 
-## Improvements Over Original Version
-
-### What Changed?
-
-**Old approach (count mode)**:
-- Counted all SYN-RECV connections in current snapshot
-- Blocked if total exceeded threshold
-- Risk: Legitimate high-traffic = false positives
-
-**New approach (age/rate modes)**:
-- **Age mode**: Only counts connections stuck >3 seconds (attacks persist, legitimate traffic completes)
-- **Rate mode**: Tracks connection rate over time windows (detects bursts)
-- **Per-IP limiting**: Catches single-source attacks early
-- **Better logging**: Shows why each block happened
-
-### Real-World Scenarios
-
-**Scenario 1: 1000 legitimate users connect simultaneously**
-- Old: Would see 1000 SYN-RECV → BLOCK (false positive!)
-- New (age mode): Sees 1000 SYN-RECV, but they complete in <1s → No block ✅
-
-**Scenario 2: SYN flood attack from 138.121.245.x**
-- Old: Counts SYN-RECV → blocks at threshold
-- New: Counts stuck connections + rate + per-IP → blocks faster with detailed reason ✅
-
-**Scenario 3: Slow distributed attack (10 IPs, 5 conn each)**
-- Old: 50 total connections spread across subnets → might miss it
-- New (rate mode): Detects 50 connections in 60s window → blocks ✅
-
 ## Limitations
 
 - **Bandwidth already consumed**: iptables blocks at host level, so traffic still hits your network interface
@@ -450,14 +421,6 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## Quick Reference
 
-### Detection Modes at a Glance
-
-| Mode | When to Use | False Positives | Detection Speed | Best For |
-|------|------------|----------------|----------------|----------|
-| **age** | High-traffic sites | ⭐⭐⭐ Low | Medium | Production sites |
-| **rate** | Burst attacks | ⭐⭐ Medium | Medium | Sophisticated attacks |
-| **count** | Obvious attacks | ⭐ High | Fast | Low-traffic or clear attacks |
-
 ### Configuration Templates
 
 **Conservative (minimize false positives)**:
@@ -510,4 +473,5 @@ sudo journalctl -u ddos-guard -n 50
 This tool is provided as-is for educational and practical use. It's designed for small-scale attacks and should not be considered a replacement for professional DDoS protection services for high-value targets or large-scale attacks.
 
 The new detection modes significantly reduce false positives, but you should always monitor the tool's behavior in your specific environment and adjust thresholds accordingly.
+
 
