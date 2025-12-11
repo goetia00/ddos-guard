@@ -1,6 +1,6 @@
 # DDoS Guard
 
-Automatic SYN flood detection and mitigation for Linux servers using iptables.
+Simple SYN flood detection and mitigation for Linux servers using iptables.
 
 ## Overview
 
@@ -65,7 +65,7 @@ sudo cp whitelist.txt /etc/ddos-guard/
 
 2. Configure (edit `/etc/ddos-guard/ddos-guard.conf`):
 ```bash
-sudo nano /etc/ddos-guard/ddos-guard.conf
+sudo vim /etc/ddos-guard/ddos-guard.conf
 ```
 
 3. Enable and start service:
@@ -224,10 +224,6 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
-
-## Author
-
-Created to solve real DDoS attacks in production. If this tool saved your servers, consider starring the repo! ⭐
 
 ## Related Projects
 
