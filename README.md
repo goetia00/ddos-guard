@@ -22,7 +22,6 @@ DDoS Guard is a lightweight systemd service that monitors for SYN flood attacks 
 
 ✅ **Good for:**
 - Small-medium VPS under SYN flood attack
-- Budget-conscious operations
 - Attacks from limited IP ranges (script kiddies, small botnets)
 - Quick automated response to persistent low-level attacks
 
