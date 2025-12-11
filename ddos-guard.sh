@@ -260,7 +260,7 @@ parse_connection_age() {
     fi
 }
 
-# Update rate tracking (for rate-based detection)
+# Update rate tracking (for PER_IP_RATE_LIMIT - works in all detection modes)
 update_rate_tracking() {
     local ip=$1
     local current_time=$(date +%s)
@@ -334,8 +334,8 @@ detect_and_block() {
                     fi
                 fi
                 
-                # Rate-based tracking
-                if [[ "$DETECTION_MODE" == "rate" ]]; then
+                # Rate tracking for PER_IP_RATE_LIMIT (works in all modes)
+                if [[ "$PER_IP_RATE_LIMIT" -gt 0 ]]; then
                     update_rate_tracking "4:$src_ip"
                 fi
                 
@@ -374,8 +374,8 @@ detect_and_block() {
                     fi
                 fi
                 
-                # Rate-based tracking
-                if [[ "$DETECTION_MODE" == "rate" ]]; then
+                # Rate tracking for PER_IP_RATE_LIMIT (works in all modes)
+                if [[ "$PER_IP_RATE_LIMIT" -gt 0 ]]; then
                     update_rate_tracking "6:$src_ip"
                 fi
                 
