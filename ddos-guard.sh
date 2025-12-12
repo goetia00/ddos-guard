@@ -421,14 +421,12 @@ detect_and_block() {
         local count=${ip_counts[$key]}
         local subnet_key="${family}:${subnet}"
         
-        if [[ -n "${subnet_counts[$subnet_key]}" ]]; then
-            subnet_counts[$subnet_key]=$((${subnet_counts[$subnet_key]} + count))
-        else
-            subnet_counts[$subnet_key]=$count
-        fi
+        # Use default value syntax to avoid unbound variable errors
+        local existing_count=${subnet_counts[$subnet_key]:-0}
+        subnet_counts[$subnet_key]=$((existing_count + count))
         
         # Set default reason if not already set
-        if [[ -z "${ip_reasons[$subnet_key]}" ]]; then
+        if [[ -z "${ip_reasons[$subnet_key]:-}" ]]; then
             ip_reasons[$subnet_key]="Threshold exceeded (mode: ${DETECTION_MODE})"
         fi
     done
@@ -437,8 +435,8 @@ detect_and_block() {
     for subnet_key in "${!subnet_counts[@]}"; do
         local family=$(echo "$subnet_key" | cut -d':' -f1)
         local subnet=$(echo "$subnet_key" | cut -d':' -f2-)
-        local count=${subnet_counts[$subnet_key]}
-        local reason="${ip_reasons[$subnet_key]}"
+        local count=${subnet_counts[$subnet_key]:-0}
+        local reason="${ip_reasons[$subnet_key]:-Threshold exceeded (mode: ${DETECTION_MODE})}"
         
         if [[ $count -ge $THRESHOLD ]]; then
             block_subnet "$subnet" "$count" "$family" "$reason"
@@ -502,9 +500,7 @@ main() {
     fi
     
     while true; do
-        if ! detect_and_block; then
-            log "ERROR: Detection scan failed, will retry in ${CHECK_INTERVAL}s"
-        fi
+        detect_and_block || log "WARNING: Detection scan encountered an error, continuing..."
         sleep "$CHECK_INTERVAL"
     done
 }
