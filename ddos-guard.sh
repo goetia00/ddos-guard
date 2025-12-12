@@ -339,7 +339,7 @@ detect_and_block() {
                     update_rate_tracking "4:$src_ip"
                 fi
                 
-                ((ip_counts["4:$src_ip"]++))
+                ip_counts["4:$src_ip"]=$((${ip_counts["4:$src_ip"]:-0} + 1))
                 ((total_syn++))
             done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} ")
         fi
@@ -379,7 +379,7 @@ detect_and_block() {
                     update_rate_tracking "6:$src_ip"
                 fi
                 
-                ((ip_counts["6:$src_ip"]++))
+                ip_counts["6:$src_ip"]=$((${ip_counts["6:$src_ip"]:-0} + 1))
                 ((total_syn++))
             done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} " | grep -v '::')
         fi
