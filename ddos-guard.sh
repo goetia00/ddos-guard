@@ -312,7 +312,7 @@ detect_and_block() {
             fi
             
             while IFS= read -r line; do
-                local src_ip=$(echo "$line" | awk '{print $5}' | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
+                local src_ip=$(echo "$line" | awk '{print $5}' | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || true)
                 
                 if [[ -z "$src_ip" ]]; then
                     continue
@@ -325,7 +325,8 @@ detect_and_block() {
                 
                 # Age-based filtering
                 if [[ "$DETECTION_MODE" == "age" ]]; then
-                    local timer_info=$(echo "$line" | grep -oP 'timer:\([^)]+\)' || echo "")
+                    # Try Perl regex first, fallback to extended regex if not supported
+                    local timer_info=$(echo "$line" | grep -oP 'timer:\([^)]+\)' 2>/dev/null || echo "$line" | grep -oE 'timer:\([^)]+\)' || echo "")
                     if [[ -n "$timer_info" ]]; then
                         local age=$(parse_connection_age "$timer_info")
                         if [[ "$age" -lt "$MIN_CONNECTION_AGE" ]]; then
@@ -341,7 +342,7 @@ detect_and_block() {
                 
                 ip_counts["4:$src_ip"]=$((${ip_counts["4:$src_ip"]:-0} + 1))
                 ((total_syn++))
-            done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} ")
+            done < <($ss_cmd 2>/dev/null | grep 'SYN-RECV' 2>/dev/null | grep ":${port} " 2>/dev/null || true)
         fi
         
         # IPv6 detection
@@ -352,7 +353,7 @@ detect_and_block() {
             fi
             
             while IFS= read -r line; do
-                local src_ip=$(echo "$line" | awk '{print $5}' | grep -Eo '^[0-9a-fA-F:]+' | head -1)
+                local src_ip=$(echo "$line" | awk '{print $5}' | grep -Eo '^[0-9a-fA-F:]+' | head -1 || true)
                 
                 if [[ -z "$src_ip" ]] || [[ "$src_ip" == "::" ]] || [[ "$src_ip" == "::1" ]]; then
                     continue
@@ -365,7 +366,8 @@ detect_and_block() {
                 
                 # Age-based filtering
                 if [[ "$DETECTION_MODE" == "age" ]]; then
-                    local timer_info=$(echo "$line" | grep -oP 'timer:\([^)]+\)' || echo "")
+                    # Try Perl regex first, fallback to extended regex if not supported
+                    local timer_info=$(echo "$line" | grep -oP 'timer:\([^)]+\)' 2>/dev/null || echo "$line" | grep -oE 'timer:\([^)]+\)' || echo "")
                     if [[ -n "$timer_info" ]]; then
                         local age=$(parse_connection_age "$timer_info")
                         if [[ "$age" -lt "$MIN_CONNECTION_AGE" ]]; then
@@ -381,7 +383,7 @@ detect_and_block() {
                 
                 ip_counts["6:$src_ip"]=$((${ip_counts["6:$src_ip"]:-0} + 1))
                 ((total_syn++))
-            done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} " | grep -v '::')
+            done < <($ss_cmd 2>/dev/null | grep 'SYN-RECV' 2>/dev/null | grep ":${port} " 2>/dev/null | grep -v '::' 2>/dev/null || true)
         fi
     done
     
@@ -449,7 +451,10 @@ detect_and_block() {
     auto_unblock
     
     # Report summary
-    local total_blocked=$(grep -c '^\[IPv' "$STATE_FILE" 2>/dev/null || echo 0)
+    local total_blocked=0
+    if [[ -f "$STATE_FILE" ]]; then
+        total_blocked=$(grep -c '^\[IPv' "$STATE_FILE" 2>/dev/null || echo 0)
+    fi
     log "Scan complete. Total subnets blocked: $total_blocked"
 }
 
@@ -497,7 +502,9 @@ main() {
     fi
     
     while true; do
-        detect_and_block
+        if ! detect_and_block; then
+            log "ERROR: Detection scan failed, will retry in ${CHECK_INTERVAL}s"
+        fi
         sleep "$CHECK_INTERVAL"
     done
 }
