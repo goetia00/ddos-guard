@@ -341,7 +341,7 @@ detect_and_block() {
                 
                 ((ip_counts["4:$src_ip"]++))
                 ((total_syn++))
-            done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} " | grep -v ':')
+            done < <($ss_cmd | grep 'SYN-RECV' | grep ":${port} ")
         fi
         
         # IPv6 detection
