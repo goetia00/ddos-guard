@@ -11,6 +11,8 @@ LOG_FILE="/var/log/ddos-guard.log"
 STATE_FILE="/var/run/ddos-guard.state"
 LOCK_FILE="/var/run/ddos-guard.lock"
 RATE_TRACKING_FILE="/var/run/ddos-guard.rates"
+METRICS_FILE="/var/lib/node_exporter/textfile_collector/ddos_guard.prom"
+GEOIP_CACHE_FILE="/var/run/ddos-guard.geoip_cache"
 
 # Load configuration
 load_config() {
@@ -46,6 +48,24 @@ load_config() {
     RATE_WINDOW=${RATE_WINDOW:-60}
     PER_IP_RATE_LIMIT=${PER_IP_RATE_LIMIT:-30}
     
+    # Metrics and monitoring options
+    ENABLE_METRICS=${ENABLE_METRICS:-false}
+    METRICS_FILE=${METRICS_FILE:-"/var/lib/node_exporter/textfile_collector/ddos_guard.prom"}
+    ENABLE_GEOIP=${ENABLE_GEOIP:-false}
+    GEOIP_DB_PATH=${GEOIP_DB_PATH:-"/usr/share/GeoIP/GeoLite2-City.mmdb"}
+    
+    # ASN lookup options
+    ENABLE_ASN_LOOKUP=${ENABLE_ASN_LOOKUP:-false}
+    ASN_DB_PATH=${ASN_DB_PATH:-"/usr/share/GeoIP/GeoLite2-ASN.mmdb"}
+    ASN_LOOKUP_METHOD=${ASN_LOOKUP_METHOD:-"mmdb"}
+    
+    # Threat intelligence sharing options
+    ENABLE_INTEL_SHARING=${ENABLE_INTEL_SHARING:-false}
+    INTEL_FEED_URL=${INTEL_FEED_URL:-"https://raw.githubusercontent.com/ddos-guard/threat-intel/main/blocked_subnets.json"}
+    INTEL_EXPORT_FILE=${INTEL_EXPORT_FILE:-"/var/run/ddos-guard.intel_export.json"}
+    INTEL_FEED_FILE=${INTEL_FEED_FILE:-"/var/run/ddos-guard.intel_feed.json"}
+    AUTO_BLOCK_FROM_FEED=${AUTO_BLOCK_FROM_FEED:-false}
+    
     # Validate detection mode
     if [[ ! "$DETECTION_MODE" =~ ^(count|age|rate)$ ]]; then
         log "WARNING: Invalid DETECTION_MODE '$DETECTION_MODE', using 'age'"
@@ -68,6 +88,21 @@ init_files() {
     touch "$LOG_FILE"
     touch "$STATE_FILE"
     touch "$RATE_TRACKING_FILE"
+    
+    # Create metrics directory if enabled
+    if [[ "$ENABLE_METRICS" == "true" ]]; then
+        mkdir -p "$(dirname "$METRICS_FILE")"
+        touch "$METRICS_FILE"
+    fi
+    
+    # Create GeoIP cache file if enabled
+    if [[ "$ENABLE_GEOIP" == "true" ]]; then
+        touch "$GEOIP_CACHE_FILE"
+    fi
+    
+    # Initialize GeoIP and ASN caches
+    declare -gA geoip_cache
+    declare -gA asn_cache
 }
 
 # Logging function
@@ -186,6 +221,9 @@ block_subnet() {
         echo "[IPv4]${subnet}.0/${SUBNET_MASK} $(date +%s)" >> "$STATE_FILE"
     fi
     
+    # Export metrics
+    export_metrics
+    
     # Save iptables rules persistently
     if [[ "$SAVE_IPTABLES" == "true" ]]; then
         if command -v iptables-save &> /dev/null; then
@@ -257,6 +295,414 @@ parse_connection_age() {
     else
         # If we can't parse age, assume it's old enough
         echo "$MIN_CONNECTION_AGE"
+    fi
+}
+
+# Get GeoIP information for an IP (with caching)
+get_geoip_info() {
+    local ip=$1
+    
+    # Check cache first
+    if [[ -f "$GEOIP_CACHE_FILE" ]]; then
+        local cached=$(grep "^${ip}:" "$GEOIP_CACHE_FILE" 2>/dev/null | cut -d':' -f2-)
+        if [[ -n "$cached" ]]; then
+            echo "$cached"
+            return 0
+        fi
+    fi
+    
+    # Try to use GeoIP lookup if available
+    local country="unknown"
+    local city="unknown"
+    local lat="0"
+    local lon="0"
+    
+    # Try mmdblookup (MaxMind GeoLite2)
+    if [[ "$ENABLE_GEOIP" == "true" ]] && [[ -f "$GEOIP_DB_PATH" ]] && command -v mmdblookup &> /dev/null; then
+        local geoip_output=$(mmdblookup -f "$GEOIP_DB_PATH" -i "$ip" 2>/dev/null)
+        if [[ -n "$geoip_output" ]]; then
+            country=$(echo "$geoip_output" | grep -A 1 '"country".*"iso_code"' | tail -1 | awk '{print $1}' | tr -d '"' || echo "unknown")
+            city=$(echo "$geoip_output" | grep -A 1 '"city".*"names".*"en"' | tail -1 | awk '{print $1}' | tr -d '"' || echo "unknown")
+            lat=$(echo "$geoip_output" | grep -A 1 '"location".*"latitude"' | tail -1 | awk '{print $1}' || echo "0")
+            lon=$(echo "$geoip_output" | grep -A 1 '"location".*"longitude"' | tail -1 | awk '{print $1}' || echo "0")
+        fi
+    fi
+    
+    # Cache the result
+    echo "${ip}:${country}:${city}:${lat}:${lon}" >> "$GEOIP_CACHE_FILE" 2>/dev/null || true
+    
+    echo "${country}:${city}:${lat}:${lon}"
+}
+
+# Get ASN (Autonomous System Number) information for an IP
+get_asn_info() {
+    local ip=$1
+    
+    # Check cache first
+    if [[ -n "${asn_cache[$ip]:-}" ]]; then
+        echo "${asn_cache[$ip]}"
+        return
+    fi
+    
+    local asn="unknown"
+    local as_name="unknown"
+    local as_org="unknown"
+    
+    if [[ "$ENABLE_ASN_LOOKUP" != "true" ]]; then
+        echo "${asn}:${as_name}:${as_org}"
+        return
+    fi
+    
+    case "$ASN_LOOKUP_METHOD" in
+        mmdb)
+            # MaxMind GeoLite2-ASN database lookup
+            if [[ -f "$ASN_DB_PATH" ]] && command -v mmdblookup &> /dev/null; then
+                local asn_output=$(mmdblookup -f "$ASN_DB_PATH" -i "$ip" 2>/dev/null)
+                if [[ -n "$asn_output" ]]; then
+                    # Extract ASN number
+                    local asn_num=$(echo "$asn_output" | grep "autonomous_system_number" | grep -oE '[0-9]+' | head -1)
+                    if [[ -n "$asn_num" ]]; then
+                        asn="AS${asn_num}"
+                    fi
+                    
+                    # Extract organization name
+                    local org_line=$(echo "$asn_output" | grep "autonomous_system_organization" | head -1)
+                    if [[ -n "$org_line" ]]; then
+                        as_org=$(echo "$org_line" | sed 's/.*"\(.*\)".*/\1/' | head -1)
+                        # Get short name (first word, uppercase, remove special chars)
+                        as_name=$(echo "$as_org" | awk '{print toupper($1)}' | sed 's/[^A-Z0-9-]//g' | cut -c1-20)
+                    fi
+                fi
+            fi
+            ;;
+        cymru)
+            # Team Cymru DNS-based lookup (requires network access)
+            if command -v dig &> /dev/null; then
+                # Reverse IP for DNS query
+                local reversed=$(echo "$ip" | awk -F. '{print $4"."$3"."$2"."$1}')
+                local cymru_result=$(dig +short TXT "${reversed}.origin.asn.cymru.com" 2>/dev/null | head -1 | tr -d '"')
+                
+                if [[ -n "$cymru_result" ]]; then
+                    local asn_num=$(echo "$cymru_result" | awk -F'|' '{print $1}' | tr -d ' ')
+                    if [[ -n "$asn_num" ]]; then
+                        asn="AS${asn_num}"
+                        
+                        # Get AS name with another query
+                        local as_result=$(dig +short TXT "AS${asn_num}.asn.cymru.com" 2>/dev/null | head -1 | tr -d '"')
+                        if [[ -n "$as_result" ]]; then
+                            as_org=$(echo "$as_result" | awk -F'|' '{print $5}' | sed 's/^ *//;s/ *$//')
+                            as_name=$(echo "$as_org" | awk '{print toupper($1)}' | sed 's/[^A-Z0-9-]//g' | cut -c1-20)
+                        fi
+                    fi
+                fi
+            fi
+            ;;
+    esac
+    
+    local result="${asn}:${as_name}:${as_org}"
+    
+    # Store in cache
+    asn_cache[$ip]="$result"
+    
+    echo "$result"
+}
+
+# Export Prometheus metrics
+export_metrics() {
+    if [[ "$ENABLE_METRICS" != "true" ]]; then
+        return
+    fi
+    
+    local metrics_tmp="${METRICS_FILE}.tmp"
+    
+    # Write metrics header
+    cat > "$metrics_tmp" <<EOF
+# HELP ddos_guard_blocked_subnets_total Total number of subnets currently blocked
+# TYPE ddos_guard_blocked_subnets_total gauge
+EOF
+    
+    # Count blocked subnets
+    local total_blocked=0
+    local ipv4_blocked=0
+    local ipv6_blocked=0
+    
+    if [[ -f "$STATE_FILE" ]]; then
+        total_blocked=$(grep -c '^\[IPv' "$STATE_FILE" 2>/dev/null || echo 0)
+        ipv4_blocked=$(grep -c '^\[IPv4\]' "$STATE_FILE" 2>/dev/null || echo 0)
+        ipv6_blocked=$(grep -c '^\[IPv6\]' "$STATE_FILE" 2>/dev/null || echo 0)
+    fi
+    
+    cat >> "$metrics_tmp" <<EOF
+ddos_guard_blocked_subnets_total{family="all"} $total_blocked
+ddos_guard_blocked_subnets_total{family="ipv4"} $ipv4_blocked
+ddos_guard_blocked_subnets_total{family="ipv6"} $ipv6_blocked
+EOF
+    
+    # Export individual blocked subnets with GeoIP data
+    if [[ -f "$STATE_FILE" ]] && [[ "$ENABLE_GEOIP" == "true" ]]; then
+        cat >> "$metrics_tmp" <<EOF
+
+# HELP ddos_guard_blocked_subnet_info Information about blocked subnets
+# TYPE ddos_guard_blocked_subnet_info gauge
+EOF
+        
+        while IFS= read -r line; do
+            if [[ -z "$line" ]]; then
+                continue
+            fi
+            
+            local subnet_entry=$(echo "$line" | awk '{print $1}')
+            local timestamp=$(echo "$line" | awk '{print $2}')
+            
+            if [[ -z "$subnet_entry" ]] || [[ -z "$timestamp" ]]; then
+                continue
+            fi
+            
+            # Extract subnet and family
+            local subnet=$(echo "$subnet_entry" | sed 's/^\[IPv[46]\]//' | cut -d'/' -f1)
+            local family=$(echo "$subnet_entry" | grep -o 'IPv[46]' | grep -o '[46]')
+            
+            # Get GeoIP info (use first IP in subnet for lookup)
+            local lookup_ip="$subnet"
+            if [[ "$family" == "4" ]]; then
+                # If subnet is just prefix (e.g., "192.0.2"), add .1
+                if [[ ! "$subnet" =~ \. ]]; then
+                    lookup_ip="${subnet}.0.0.1"
+                elif [[ $(echo "$subnet" | tr -cd '.' | wc -c) -eq 1 ]]; then
+                    lookup_ip="${subnet}.0.1"
+                elif [[ $(echo "$subnet" | tr -cd '.' | wc -c) -eq 2 ]]; then
+                    lookup_ip="${subnet}.1"
+                fi
+            fi
+            
+            local geoip_info=$(get_geoip_info "$lookup_ip")
+            local country=$(echo "$geoip_info" | cut -d':' -f1)
+            local city=$(echo "$geoip_info" | cut -d':' -f2)
+            local lat=$(echo "$geoip_info" | cut -d':' -f3)
+            local lon=$(echo "$geoip_info" | cut -d':' -f4)
+            
+            # Get ASN info if enabled
+            local asn="unknown"
+            local as_name="unknown"
+            if [[ "$ENABLE_ASN_LOOKUP" == "true" ]]; then
+                local asn_info=$(get_asn_info "$lookup_ip")
+                asn=$(echo "$asn_info" | cut -d':' -f1)
+                as_name=$(echo "$asn_info" | cut -d':' -f2)
+            fi
+            
+            # Escape special characters for Prometheus
+            subnet=$(echo "$subnet_entry" | sed 's/^\[IPv[46]\]//')
+            country=$(echo "$country" | sed 's/"/\\"/g')
+            city=$(echo "$city" | sed 's/"/\\"/g')
+            asn=$(echo "$asn" | sed 's/"/\\"/g')
+            as_name=$(echo "$as_name" | sed 's/"/\\"/g')
+            
+            cat >> "$metrics_tmp" <<EOF
+ddos_guard_blocked_subnet_info{subnet="$subnet",family="ipv${family}",country="$country",city="$city",latitude="$lat",longitude="$lon",asn="$asn",as_name="$as_name"} 1
+EOF
+        done < "$STATE_FILE"
+    fi
+    
+    # Export detection statistics
+    cat >> "$metrics_tmp" <<EOF
+
+# HELP ddos_guard_scans_total Total number of detection scans performed
+# TYPE ddos_guard_scans_total counter
+# NOTE: This metric is incremented on each scan, actual value managed externally
+
+# HELP ddos_guard_blocks_total Total number of blocks performed
+# TYPE ddos_guard_blocks_total counter
+# NOTE: This metric is incremented on each block, actual value managed externally
+EOF
+    
+    # Atomic write
+    mv "$metrics_tmp" "$METRICS_FILE" 2>/dev/null || true
+}
+
+# Export blocked subnets for threat intelligence sharing
+export_threat_intel() {
+    if [[ "$ENABLE_INTEL_SHARING" != "true" ]]; then
+        return
+    fi
+    
+    if [[ ! -f "$STATE_FILE" ]]; then
+        return
+    fi
+    
+    local intel_tmp="${INTEL_EXPORT_FILE}.tmp"
+    local current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Start JSON array
+    echo "{" > "$intel_tmp"
+    echo "  \"version\": \"1.0\"," >> "$intel_tmp"
+    echo "  \"generated_at\": \"${current_time}\"," >> "$intel_tmp"
+    echo "  \"source\": \"ddos-guard\"," >> "$intel_tmp"
+    echo "  \"blocked_subnets\": [" >> "$intel_tmp"
+    
+    local first=true
+    while IFS= read -r line; do
+        if [[ -z "$line" ]]; then
+            continue
+        fi
+        
+        local subnet_entry=$(echo "$line" | awk '{print $1}')
+        local timestamp=$(echo "$line" | awk '{print $2}')
+        
+        if [[ -z "$subnet_entry" ]] || [[ -z "$timestamp" ]]; then
+            continue
+        fi
+        
+        # Extract subnet and family
+        local subnet=$(echo "$subnet_entry" | sed 's/^\[IPv[46]\]//')
+        local family=$(echo "$subnet_entry" | grep -o 'IPv[46]')
+        
+        # Get GeoIP info if enabled
+        local country="unknown"
+        local geoip_info=""
+        if [[ "$ENABLE_GEOIP" == "true" ]]; then
+            local lookup_ip=$(echo "$subnet" | cut -d'/' -f1 | sed 's/\.0$/\.1/')
+            geoip_info=$(get_geoip_info "$lookup_ip" 2>/dev/null || echo "unknown:unknown:0:0")
+            country=$(echo "$geoip_info" | cut -d':' -f1)
+        fi
+        
+        # Get ASN info if enabled
+        local asn="unknown"
+        local as_name="unknown"
+        local as_org="unknown"
+        if [[ "$ENABLE_ASN_LOOKUP" == "true" ]]; then
+            local lookup_ip=$(echo "$subnet" | cut -d'/' -f1 | sed 's/\.0$/\.1/')
+            local asn_info=$(get_asn_info "$lookup_ip" 2>/dev/null || echo "unknown:unknown:unknown")
+            asn=$(echo "$asn_info" | cut -d':' -f1)
+            as_name=$(echo "$asn_info" | cut -d':' -f2)
+            as_org=$(echo "$asn_info" | cut -d':' -f3)
+        fi
+        
+        # Add comma if not first entry
+        if [[ "$first" == "false" ]]; then
+            echo "," >> "$intel_tmp"
+        fi
+        first=false
+        
+        # Write subnet entry
+        cat >> "$intel_tmp" <<EOF
+    {
+      "subnet": "${subnet}",
+      "family": "${family}",
+      "first_seen": "${timestamp}",
+      "country": "${country}",
+      "asn": "${asn}",
+      "as_name": "${as_name}",
+      "as_organization": "${as_org}"
+    }
+EOF
+    done < "$STATE_FILE"
+    
+    # Close JSON
+    echo "" >> "$intel_tmp"
+    echo "  ]" >> "$intel_tmp"
+    echo "}" >> "$intel_tmp"
+    
+    # Atomic write
+    mv "$intel_tmp" "$INTEL_EXPORT_FILE" 2>/dev/null || true
+    
+    log "Threat intelligence exported to ${INTEL_EXPORT_FILE}"
+}
+
+# Download threat intelligence feed from GitHub
+download_threat_intel() {
+    if [[ "$ENABLE_INTEL_SHARING" != "true" ]]; then
+        return
+    fi
+    
+    log "Downloading threat intelligence feed from ${INTEL_FEED_URL}"
+    
+    # Download with curl or wget
+    if command -v curl &> /dev/null; then
+        curl -s -f -o "${INTEL_FEED_FILE}.tmp" "$INTEL_FEED_URL" 2>/dev/null || {
+            log "WARNING: Failed to download threat intel feed"
+            return 1
+        }
+    elif command -v wget &> /dev/null; then
+        wget -q -O "${INTEL_FEED_FILE}.tmp" "$INTEL_FEED_URL" 2>/dev/null || {
+            log "WARNING: Failed to download threat intel feed"
+            return 1
+        }
+    else
+        log "WARNING: Neither curl nor wget available for downloading threat intel"
+        return 1
+    fi
+    
+    # Validate JSON (basic check)
+    if grep -q "blocked_subnets" "${INTEL_FEED_FILE}.tmp" 2>/dev/null; then
+        mv "${INTEL_FEED_FILE}.tmp" "$INTEL_FEED_FILE"
+        log "Threat intelligence feed downloaded successfully"
+        return 0
+    else
+        log "WARNING: Downloaded threat intel feed is invalid"
+        rm -f "${INTEL_FEED_FILE}.tmp"
+        return 1
+    fi
+}
+
+# Apply blocks from threat intelligence feed
+apply_threat_intel() {
+    if [[ "$ENABLE_INTEL_SHARING" != "true" ]] || [[ "$AUTO_BLOCK_FROM_FEED" != "true" ]]; then
+        return
+    fi
+    
+    if [[ ! -f "$INTEL_FEED_FILE" ]]; then
+        log "No threat intelligence feed found, skipping"
+        return
+    fi
+    
+    log "Applying blocks from threat intelligence feed"
+    
+    local blocks_added=0
+    
+    # Parse JSON and extract subnets (using grep/awk for simplicity)
+    while IFS= read -r subnet_line; do
+        # Extract subnet value from JSON line like: "subnet": "192.0.2.0/24",
+        local subnet=$(echo "$subnet_line" | grep -oP '"subnet":\s*"\K[^"]+' || true)
+        
+        if [[ -z "$subnet" ]]; then
+            continue
+        fi
+        
+        # Determine family from subnet format
+        local family="4"
+        if [[ "$subnet" =~ : ]]; then
+            family="6"
+        fi
+        
+        # Check if already blocked
+        local subnet_prefix=$(echo "$subnet" | cut -d'/' -f1 | sed 's/\.0$//')
+        if is_blocked "$subnet_prefix" "$family"; then
+            continue
+        fi
+        
+        # Check if whitelisted
+        if is_whitelisted "$subnet"; then
+            log "Skipping whitelisted subnet from feed: ${subnet}"
+            continue
+        fi
+        
+        # Add iptables rule
+        log "BLOCKING [IPv${family}] from threat intel: ${subnet}"
+        
+        if [[ "$family" == "6" ]]; then
+            ip6tables -I INPUT -s "${subnet}" -j DROP 2>/dev/null || continue
+            echo "[IPv6]${subnet} $(date +%s)" >> "$STATE_FILE"
+        else
+            iptables -I INPUT -s "${subnet}" -j DROP 2>/dev/null || continue
+            echo "[IPv4]${subnet} $(date +%s)" >> "$STATE_FILE"
+        fi
+        
+        ((blocks_added++))
+    done < <(grep '"subnet"' "$INTEL_FEED_FILE" 2>/dev/null)
+    
+    if [[ $blocks_added -gt 0 ]]; then
+        log "Applied ${blocks_added} blocks from threat intelligence feed"
+        export_metrics
     fi
 }
 
@@ -454,6 +900,12 @@ detect_and_block() {
         total_blocked=$(grep -c '^\[IPv' "$STATE_FILE" 2>/dev/null || echo 0)
     fi
     log "Scan complete. Total subnets blocked: $total_blocked"
+    
+    # Export metrics after scan
+    export_metrics
+    
+    # Export threat intelligence
+    export_threat_intel
 }
 
 # Cleanup function
@@ -497,6 +949,13 @@ main() {
     
     if [[ "$PER_IP_RATE_LIMIT" -gt 0 ]]; then
         log "  Per-IP Rate Limit: ${PER_IP_RATE_LIMIT} conn/min"
+    fi
+    
+    # Download and apply threat intelligence feed on startup
+    if [[ "$ENABLE_INTEL_SHARING" == "true" ]]; then
+        log "Threat Intelligence: ENABLED"
+        download_threat_intel
+        apply_threat_intel
     fi
     
     while true; do

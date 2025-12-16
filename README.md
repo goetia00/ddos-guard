@@ -22,7 +22,10 @@ DDoS Guard is a lightweight systemd service that monitors for SYN flood attacks 
 - ✅ Auto-unblock after configurable time period
 - ✅ Systemd integration with proper logging
 - ✅ Persistent iptables rules
-- ✅ Zero dependencies beyond standard Linux tools (except optional `bc` for age parsing)
+- ✅ **Prometheus metrics export** for monitoring (optional)
+- ✅ **GeoIP integration** for geographic attack visualization (optional)
+- ✅ **Community threat intelligence sharing** (GitHub-based, optional)
+- ✅ Zero dependencies beyond standard Linux tools (except optional features)
 
 ## When to Use
 
@@ -412,6 +415,58 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
+
+## Monitoring and Visualization
+
+DDoS Guard can export Prometheus metrics for visualization in Grafana, including:
+- Total blocked subnets (IPv4/IPv6)
+- Geographic attack origin mapping (world map)
+- Country and city statistics
+- Historical trends
+
+See [MONITORING.md](MONITORING.md) for complete setup instructions.
+
+**Quick Start:**
+1. Enable metrics in config: `ENABLE_METRICS=true`
+2. Install node_exporter with textfile collector
+3. Import `grafana-dashboard.json` into Grafana
+4. (Optional) Enable GeoIP for geographic data: `ENABLE_GEOIP=true`
+
+## Community Threat Intelligence
+
+Share and benefit from community defense against DDoS attacks through GitHub-based threat intelligence sharing.
+
+**Features:**
+- Export your blocked subnets to JSON format
+- Download community threat intelligence feed
+- Optionally auto-block subnets from the community
+- Privacy-preserving (only subnets shared, no server info)
+- Includes ASN (Autonomous System) information for pattern analysis
+
+See [THREAT_INTEL.md](THREAT_INTEL.md) for complete guide.
+
+**Quick Start:**
+1. Enable in config: `ENABLE_INTEL_SHARING=true`
+2. Review community feed: `cat /var/run/ddos-guard.intel_feed.json`
+3. (Optional) Enable auto-blocking: `AUTO_BLOCK_FROM_FEED=true`
+4. Share your data: See contribution guide in THREAT_INTEL.md
+
+## ASN (Autonomous System) Lookup
+
+Identify the ISP, hosting provider, or organization behind attacking IPs using ASN lookup.
+
+**Features:**
+- Identify malicious hosting providers and networks
+- Track cloud infrastructure abuse (AWS, GCP, Azure)
+- Export ASN data in threat intelligence
+- Visualize attacks by organization in Grafana
+
+See [ASN_LOOKUP.md](ASN_LOOKUP.md) for complete guide.
+
+**Quick Start:**
+1. Install MaxMind GeoLite2-ASN database
+2. Enable in config: `ENABLE_ASN_LOOKUP=true`
+3. View ASN data in exports and Grafana dashboards
 
 ## Related Projects
 
