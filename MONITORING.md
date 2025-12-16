@@ -42,9 +42,9 @@ sudo systemctl restart ddos-guard
 **Debian/Ubuntu:**
 ```bash
 # Download latest release
-wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
-tar xvfz node_exporter-1.7.0.linux-amd64.tar.gz
-sudo cp node_exporter-1.7.0.linux-amd64/node_exporter /usr/local/bin/
+wget https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-amd64.tar.gz
+tar xvfz node_exporter-1.10.2.linux-amd64.tar.gz
+sudo cp node_exporter-1.10.2.linux-amd64/node_exporter /usr/local/bin/
 sudo useradd --no-create-home --shell /bin/false node_exporter
 sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
 ```
