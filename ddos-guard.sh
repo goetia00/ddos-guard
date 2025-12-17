@@ -427,9 +427,10 @@ EOF
     local ipv6_blocked=0
     
     if [[ -f "$STATE_FILE" ]]; then
-        total_blocked=$(grep -c '^\[IPv' "$STATE_FILE" 2>/dev/null || echo 0)
-        ipv4_blocked=$(grep -c '^\[IPv4\]' "$STATE_FILE" 2>/dev/null || echo 0)
-        ipv6_blocked=$(grep -c '^\[IPv6\]' "$STATE_FILE" 2>/dev/null || echo 0)
+        # Use awk for reliable counting (always outputs clean numeric values)
+        total_blocked=$(awk '/^\[IPv/ {count++} END {print count+0}' "$STATE_FILE" 2>/dev/null)
+        ipv4_blocked=$(awk '/^\[IPv4\]/ {count++} END {print count+0}' "$STATE_FILE" 2>/dev/null)
+        ipv6_blocked=$(awk '/^\[IPv6\]/ {count++} END {print count+0}' "$STATE_FILE" 2>/dev/null)
     fi
     
     cat >> "$metrics_tmp" <<EOF

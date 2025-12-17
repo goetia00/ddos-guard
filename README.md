@@ -425,20 +425,13 @@ DDoS Guard can export Prometheus metrics for visualization in Grafana, including
 - ASN (Autonomous System) analysis
 - Historical trends
 
-See [MONITORING.md](MONITORING.md) for single-server setup.
-See [CENTRALIZED_MONITORING.md](CENTRALIZED_MONITORING.md) for multi-server setup with central Prometheus/Grafana.
+See [MONITORING.md](MONITORING.md) for setup instructions.
 
-**Quick Start (Single Server):**
+**Quick Start:**
 1. Enable metrics in config: `ENABLE_METRICS=true`
 2. Install node_exporter with textfile collector
 3. Import `grafana-dashboard.json` into Grafana
 4. (Optional) Enable GeoIP for geographic data: `ENABLE_GEOIP=true`
-
-**Quick Start (Multi-Server):**
-1. Set up central monitoring server with Prometheus + Grafana
-2. Install node_exporter on each protected server
-3. Configure Prometheus to scrape all targets
-4. View all servers in a unified dashboard
 
 ## Community Threat Intelligence
 
