@@ -141,8 +141,19 @@ setup_iptables() {
     fi
     
     # Check for iptables-persistent
-    if ! dpkg -l | grep -q iptables-persistent 2>/dev/null && \
-       ! rpm -qa | grep -q iptables-services 2>/dev/null; then
+    local has_persistent=false
+    
+    # Check Debian/Ubuntu
+    if command -v dpkg &> /dev/null && dpkg -l | grep -q iptables-persistent 2>/dev/null; then
+        has_persistent=true
+    fi
+    
+    # Check RHEL/CentOS
+    if command -v rpm &> /dev/null && rpm -qa | grep -q iptables-services 2>/dev/null; then
+        has_persistent=true
+    fi
+    
+    if [[ "$has_persistent" == "false" ]]; then
         log_warn "iptables-persistent not installed"
         log_info "Rules will be saved but may not persist across reboots"
         log_info "Install with: apt install iptables-persistent (Debian/Ubuntu)"
