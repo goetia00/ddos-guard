@@ -191,20 +191,20 @@ sudo mkdir /etc/prometheus
 sudo mkdir /var/lib/prometheus
 sudo chown prometheus:prometheus /var/lib/prometheus
 
-# Download Prometheus
+# Download Prometheus (latest version)
 cd /tmp
-wget https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-2.48.0.linux-amd64.tar.gz
-tar xvfz prometheus-2.48.0.linux-amd64.tar.gz
+wget https://github.com/prometheus/prometheus/releases/download/v3.8.1/prometheus-3.8.1.linux-amd64.tar.gz
+tar xvfz prometheus-3.8.1.linux-amd64.tar.gz
 
 # Install binaries
-sudo cp prometheus-2.48.0.linux-amd64/prometheus /usr/local/bin/
-sudo cp prometheus-2.48.0.linux-amd64/promtool /usr/local/bin/
+sudo cp prometheus-3.8.1.linux-amd64/prometheus /usr/local/bin/
+sudo cp prometheus-3.8.1.linux-amd64/promtool /usr/local/bin/
 sudo chown prometheus:prometheus /usr/local/bin/prometheus
 sudo chown prometheus:prometheus /usr/local/bin/promtool
 
 # Copy console files
-sudo cp -r prometheus-2.48.0.linux-amd64/consoles /etc/prometheus
-sudo cp -r prometheus-2.48.0.linux-amd64/console_libraries /etc/prometheus
+sudo cp -r prometheus-3.8.1.linux-amd64/consoles /etc/prometheus
+sudo cp -r prometheus-3.8.1.linux-amd64/console_libraries /etc/prometheus
 sudo chown -R prometheus:prometheus /etc/prometheus
 ```
 
