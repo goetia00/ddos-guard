@@ -60,18 +60,14 @@ User=node_exporter
 Group=node_exporter
 Type=simple
 ExecStart=/usr/local/bin/node_exporter \
-    --collector.textfile.directory=/var/lib/node_exporter/textfile_collector \
-    --collector.textfile
+    --collector.textfile.directory=/var/run/ddos-guard \
+    --web.listen-address=0.0.0.0:9100
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-**Create metrics directory:**
-```bash
-sudo mkdir -p /var/lib/node_exporter/textfile_collector
-sudo chown node_exporter:node_exporter /var/lib/node_exporter/textfile_collector
-```
+**Note:** The metrics directory `/var/run/ddos-guard` is created automatically by ddos-guard. No manual setup needed.
 
 **Start node_exporter:**
 ```bash
@@ -144,7 +140,7 @@ Check that metrics are being exported:
 
 ```bash
 # View metrics file
-sudo cat /var/lib/node_exporter/textfile_collector/ddos_guard.prom
+sudo cat /var/run/ddos-guard/ddos_guard.prom
 
 # Or query via node_exporter
 curl http://localhost:9100/metrics | grep ddos_guard
@@ -169,13 +165,14 @@ ddos_guard_blocked_subnet_info{subnet="192.0.2.0/24",family="ipv4",country="US",
 
 1. **Check metrics file exists:**
    ```bash
-   sudo ls -la /var/lib/node_exporter/textfile_collector/ddos_guard.prom
+   sudo ls -la /var/run/ddos-guard/ddos_guard.prom
    ```
 
 2. **Check file permissions:**
    ```bash
-   sudo chmod 644 /var/lib/node_exporter/textfile_collector/ddos_guard.prom
-   sudo chown node_exporter:node_exporter /var/lib/node_exporter/textfile_collector/ddos_guard.prom
+   # /var/run is a tmpfs, so permissions should be fine
+   # If needed, ensure ddos-guard can write:
+   sudo ls -ld /var/run/ddos-guard
    ```
 
 3. **Check node_exporter logs:**

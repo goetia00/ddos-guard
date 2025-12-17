@@ -16,7 +16,7 @@ StandardError=journal
 NoNewPrivileges=false
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/var/log /var/run /etc/ddos-guard /etc/iptables /var/lib/node_exporter
+ReadWritePaths=/var/log /var/run /etc/ddos-guard /etc/iptables
 
 [Install]
 WantedBy=multi-user.target

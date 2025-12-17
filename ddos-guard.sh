@@ -11,7 +11,7 @@ LOG_FILE="/var/log/ddos-guard.log"
 STATE_FILE="/var/run/ddos-guard.state"
 LOCK_FILE="/var/run/ddos-guard.lock"
 RATE_TRACKING_FILE="/var/run/ddos-guard.rates"
-METRICS_FILE="/var/lib/node_exporter/textfile_collector/ddos_guard.prom"
+METRICS_FILE="/var/run/ddos-guard/ddos_guard.prom"
 GEOIP_CACHE_FILE="/var/run/ddos-guard.geoip_cache"
 
 # Load configuration
@@ -50,7 +50,7 @@ load_config() {
     
     # Metrics and monitoring options
     ENABLE_METRICS=${ENABLE_METRICS:-false}
-    METRICS_FILE=${METRICS_FILE:-"/var/lib/node_exporter/textfile_collector/ddos_guard.prom"}
+    METRICS_FILE=${METRICS_FILE:-"/var/run/ddos-guard/ddos_guard.prom"}
     ENABLE_GEOIP=${ENABLE_GEOIP:-false}
     GEOIP_DB_PATH=${GEOIP_DB_PATH:-"/usr/share/GeoIP/GeoLite2-City.mmdb"}
     
@@ -91,8 +91,14 @@ init_files() {
     
     # Create metrics directory if enabled
     if [[ "$ENABLE_METRICS" == "true" ]]; then
-        mkdir -p "$(dirname "$METRICS_FILE")"
-        touch "$METRICS_FILE"
+        local metrics_dir="$(dirname "$METRICS_FILE")"
+        if mkdir -p "$metrics_dir" 2>/dev/null && touch "$METRICS_FILE" 2>/dev/null; then
+            log "Metrics file initialized: $METRICS_FILE"
+        else
+            log "WARNING: Cannot create metrics file at $METRICS_FILE (permissions issue)"
+            log "WARNING: Metrics disabled. Check directory permissions or use a different path"
+            ENABLE_METRICS=false
+        fi
     fi
     
     # Create GeoIP cache file if enabled
