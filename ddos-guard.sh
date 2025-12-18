@@ -327,17 +327,21 @@ get_geoip_info() {
     if [[ "$ENABLE_GEOIP" == "true" ]] && [[ -f "$GEOIP_DB_PATH" ]] && command -v mmdblookup &> /dev/null; then
         local geoip_output=$(mmdblookup -f "$GEOIP_DB_PATH" -i "$ip" 2>/dev/null)
         if [[ -n "$geoip_output" ]]; then
-            # Extract country code (iso_code under country section)
-            country=$(echo "$geoip_output" | grep -A 5 '"country"' | grep '"iso_code"' | head -1 | awk -F'"' '{print $(NF-1)}' || echo "unknown")
+            # Extract country code (value on line after "iso_code" under country section)
+            # Format: "iso_code": \n "BR" <utf8_string>
+            country=$(echo "$geoip_output" | awk '/"country"/{flag=1} flag && /"iso_code"/{getline; gsub(/^[^"]*"|"[^"]*$/, ""); if ($0 != "") print; exit}' || echo "unknown")
             
-            # Extract city name (English name under city/names section)
-            city=$(echo "$geoip_output" | grep -A 10 '"city"' | grep -A 5 '"names"' | grep '"en"' | head -1 | awk -F'"' '{print $(NF-1)}' || echo "unknown")
+            # Extract city name (value on line after "en" under city/names section)
+            # Format: "en": \n "São Paulo" <utf8_string>
+            city=$(echo "$geoip_output" | awk '/"city"/{flag=1} flag && /"names"/{flag2=1} flag2 && /"en"/{getline; gsub(/^[^"]*"|"[^"]*$/, ""); if ($0 != "") print; exit}' || echo "unknown")
             
-            # Extract latitude (under location section)
-            lat=$(echo "$geoip_output" | grep -A 5 '"location"' | grep '"latitude"' | head -1 | awk '{print $1}' || echo "0")
+            # Extract latitude (value on line after "latitude" under location section)
+            # Format: "latitude": \n -23.547500 <double>
+            lat=$(echo "$geoip_output" | awk '/"location"/{flag=1} flag && /"latitude"/{getline; gsub(/[^0-9.-]/, "", $1); if ($1 != "") print $1; exit}' || echo "0")
             
-            # Extract longitude (under location section)
-            lon=$(echo "$geoip_output" | grep -A 5 '"location"' | grep '"longitude"' | head -1 | awk '{print $1}' || echo "0")
+            # Extract longitude (value on line after "longitude" under location section)
+            # Format: "longitude": \n -46.636100 <double>
+            lon=$(echo "$geoip_output" | awk '/"location"/{flag=1} flag && /"longitude"/{getline; gsub(/[^0-9.-]/, "", $1); if ($1 != "") print $1; exit}' || echo "0")
         fi
     fi
     
