@@ -1,408 +1,584 @@
 {
-  "dashboard": {
-    "title": "DDoS Guard - Attack Visualization",
-    "tags": ["ddos", "security", "network"],
-    "timezone": "browser",
-    "schemaVersion": 27,
-    "version": 1,
-    "refresh": "30s",
-    "panels": [
-      {
-        "id": 1,
-        "title": "Blocked Subnets Total",
-        "type": "stat",
-        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"all\"}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "thresholds"},
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 10, "color": "yellow"},
-                {"value": 50, "color": "red"}
-              ]
-            },
-            "unit": "short"
-          }
-        }
+  "title": "DDoS Guard - Attack Visualization",
+  "tags": [
+    "ddos",
+    "security",
+    "network"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Blocked Subnets Total",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
       },
-      {
-        "id": 2,
-        "title": "IPv4 Blocked",
-        "type": "stat",
-        "gridPos": {"h": 4, "w": 3, "x": 6, "y": 0},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"ipv4\"}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "short"
-          }
-        }
-      },
-      {
-        "id": 3,
-        "title": "IPv6 Blocked",
-        "type": "stat",
-        "gridPos": {"h": 4, "w": 3, "x": 9, "y": 0},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"ipv6\"}",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "unit": "short"
-          }
-        }
-      },
-      {
-        "id": 4,
-        "title": "Attack Origins Map",
-        "type": "geomap",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnet_info",
-            "refId": "A",
-            "format": "table"
-          }
-        ],
-        "options": {
-          "basemap": {
-            "type": "default",
-            "name": "Default"
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
           },
-          "layers": [
-            {
-              "type": "markers",
-              "config": {
-                "style": {
-                  "color": {
-                    "fixed": "red"
-                  },
-                  "size": {
-                    "fixed": 5,
-                    "min": 2,
-                    "max": 15
-                  },
-                  "opacity": 0.8
+          "expr": "ddos_guard_blocked_subnets_total{family=\"all\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 10,
+                "color": "yellow"
+              },
+              {
+                "value": 50,
+                "color": "red"
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "IPv4 Blocked",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnets_total{family=\"ipv4\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "IPv6 Blocked",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnets_total{family=\"ipv6\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Attack Origins Map",
+      "type": "geomap",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnet_info",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "basemap": {
+          "type": "default",
+          "name": "Default"
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "config": {
+              "style": {
+                "color": {
+                  "fixed": "red"
                 },
-                "showLegend": true
+                "size": {
+                  "fixed": 5,
+                  "min": 2,
+                  "max": 15
+                },
+                "opacity": 0.8
               },
-              "location": {
-                "mode": "coords",
-                "latitude": "latitude",
-                "longitude": "longitude"
-              },
-              "tooltip": {
-                "mode": "details"
+              "showLegend": true
+            },
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "tooltip": {
+              "mode": "details"
+            }
+          }
+        ],
+        "view": {
+          "id": "zero",
+          "lat": 0,
+          "lon": 0,
+          "zoom": 2
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Blocked Subnets by Country",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "sum by (country) (ddos_guard_blocked_subnet_info)",
+          "refId": "A",
+          "legendFormat": "{{country}}"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showLegend": true,
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Blocked Subnets List",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnet_info",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Blocked Subnets Over Time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnets_total{family=\"all\"}",
+          "refId": "A",
+          "legendFormat": "Total Blocked"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnets_total{family=\"ipv4\"}",
+          "refId": "B",
+          "legendFormat": "IPv4"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnets_total{family=\"ipv6\"}",
+          "refId": "C",
+          "legendFormat": "IPv6"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Top Attacking ASNs",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "count by (asn, as_name) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"})",
+          "refId": "A",
+          "legendFormat": "{{asn}} - {{as_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Number of Blocked Subnets",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      }
+    },
+    {
+      "id": 10,
+      "title": "Blocked Subnets by ASN (Table)",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "ddos_guard_blocked_subnet_info",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "family": false,
+              "latitude": true,
+              "longitude": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "asn": "ASN",
+              "as_name": "Organization",
+              "subnet": "Subnet",
+              "country": "Country",
+              "city": "City",
+              "family": "IP Version"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "ASN",
+                "desc": false
               }
-            }
-          ],
-          "view": {
-            "id": "zero",
-            "lat": 0,
-            "lon": 0,
-            "zoom": 2
-          }
-        },
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "align": "auto"
-            }
+            ]
           }
         }
-      },
-      {
-        "id": 5,
-        "title": "Blocked Subnets by Country",
-        "type": "barchart",
-        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
-        "targets": [
-          {
-            "expr": "sum by (country) (ddos_guard_blocked_subnet_info)",
-            "refId": "A",
-            "legendFormat": "{{country}}"
-          }
-        ],
-        "options": {
-          "orientation": "horizontal",
-          "xTickLabelRotation": 0,
-          "showLegend": true,
-          "legend": {
-            "displayMode": "table",
-            "placement": "bottom"
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
           }
         },
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"}
-          }
-        }
-      },
-      {
-        "id": 6,
-        "title": "Blocked Subnets List",
-        "type": "table",
-        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 4},
-        "targets": [
+        "overrides": [
           {
-            "expr": "ddos_guard_blocked_subnet_info",
-            "refId": "A",
-            "format": "table"
-          }
-        ],
-        "options": {
-          "showHeader": true,
-          "sortBy": []
-        },
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "align": "auto",
-              "displayMode": "auto"
-            }
-          },
-          "overrides": []
-        }
-      },
-      {
-        "id": 7,
-        "title": "Blocked Subnets Over Time",
-        "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"all\"}",
-            "refId": "A",
-            "legendFormat": "Total Blocked"
-          },
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"ipv4\"}",
-            "refId": "B",
-            "legendFormat": "IPv4"
-          },
-          {
-            "expr": "ddos_guard_blocked_subnets_total{family=\"ipv6\"}",
-            "refId": "C",
-            "legendFormat": "IPv6"
-          }
-        ],
-        "options": {
-          "legend": {
-            "displayMode": "table",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "multi"
-          }
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"}
-          }
-        }
-      },
-      {
-        "id": 9,
-        "title": "Top Attacking ASNs",
-        "type": "barchart",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
-        "targets": [
-          {
-            "expr": "count by (asn, as_name) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"})",
-            "refId": "A",
-            "legendFormat": "{{asn}} - {{as_name}}"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "custom": {
-              "axisLabel": "Number of Blocked Subnets",
-              "axisPlacement": "auto",
-              "fillOpacity": 80,
-              "gradientMode": "none",
-              "hideFrom": {"tooltip": false, "viz": false, "legend": false},
-              "lineWidth": 1,
-              "scaleDistribution": {"type": "linear"}
-            }
-          }
-        },
-        "options": {
-          "orientation": "horizontal",
-          "showValue": "auto",
-          "xTickLabelRotation": 0,
-          "xTickLabelSpacing": 0
-        }
-      },
-      {
-        "id": 10,
-        "title": "Blocked Subnets by ASN (Table)",
-        "type": "table",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
-        "targets": [
-          {
-            "expr": "ddos_guard_blocked_subnet_info",
-            "refId": "A",
-            "format": "table",
-            "instant": true
-          }
-        ],
-        "transformations": [
-          {
-            "id": "organize",
-            "options": {
-              "excludeByName": {
-                "Time": true,
-                "Value": true,
-                "family": false,
-                "latitude": true,
-                "longitude": true,
-                "__name__": true,
-                "instance": true,
-                "job": true
+            "matcher": {
+              "id": "byName",
+              "options": "ASN"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
               },
-              "indexByName": {},
-              "renameByName": {
-                "asn": "ASN",
-                "as_name": "Organization",
-                "subnet": "Subnet",
-                "country": "Country",
-                "city": "City",
-                "family": "IP Version"
-              }
-            }
-          },
-          {
-            "id": "sortBy",
-            "options": {
-              "fields": {},
-              "sort": [{"field": "ASN", "desc": false}]
-            }
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "align": "auto",
-              "displayMode": "auto"
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {"id": "byName", "options": "ASN"},
-              "properties": [
-                {"id": "custom.width", "value": 100},
-                {"id": "links", "value": [
+              {
+                "id": "links",
+                "value": [
                   {
                     "title": "View ASN Details",
                     "url": "https://bgp.he.net/${__value.raw}"
                   }
-                ]}
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": 11,
-        "title": "ASN Distribution (Pie Chart)",
-        "type": "piechart",
-        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 32},
-        "targets": [
-          {
-            "expr": "count by (as_name) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"})",
-            "refId": "A",
-            "legendFormat": "{{as_name}}"
+                ]
+              }
+            ]
           }
-        ],
-        "options": {
-          "legend": {
-            "displayMode": "table",
-            "placement": "right",
-            "values": ["value", "percent"]
-          },
-          "pieType": "pie",
-          "tooltip": {"mode": "single"},
-          "displayLabels": ["name", "percent"]
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "palette-classic"},
-            "custom": {
-              "hideFrom": {"tooltip": false, "viz": false, "legend": false}
-            }
-          }
-        }
-      },
-      {
-        "id": 12,
-        "title": "Unique ASNs Blocked",
-        "type": "stat",
-        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 32},
-        "targets": [
-          {
-            "expr": "count(count by (asn) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"}))",
-            "refId": "A"
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "color": {"mode": "thresholds"},
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 5, "color": "yellow"},
-                {"value": 10, "color": "red"}
-              ]
-            },
-            "unit": "short"
-          }
-        },
-        "options": {
-          "colorMode": "value",
-          "graphMode": "none",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "values": false,
-            "calcs": ["lastNotNull"],
-            "fields": ""
-          },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "9.0.0"
+        ]
       }
-    ],
-    "time": {
-      "from": "now-6h",
-      "to": "now"
     },
-    "timepicker": {},
-    "templating": {
-      "list": []
+    {
+      "id": 11,
+      "title": "ASN Distribution (Pie Chart)",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 32
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "count by (as_name) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"})",
+          "refId": "A",
+          "legendFormat": "{{as_name}}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "tooltip": {
+          "mode": "single"
+        },
+        "displayLabels": [
+          "name",
+          "percent"
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          }
+        }
+      }
     },
-    "annotations": {
-      "list": []
+    {
+      "id": 12,
+      "title": "Unique ASNs Blocked",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 32
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": null
+          },
+          "expr": "count(count by (asn) (ddos_guard_blocked_subnet_info{asn!=\"unknown\"}))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 5,
+                "color": "yellow"
+              },
+              {
+                "value": 10,
+                "color": "red"
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.0.0"
     }
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
   }
 }
-
