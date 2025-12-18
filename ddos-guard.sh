@@ -327,10 +327,17 @@ get_geoip_info() {
     if [[ "$ENABLE_GEOIP" == "true" ]] && [[ -f "$GEOIP_DB_PATH" ]] && command -v mmdblookup &> /dev/null; then
         local geoip_output=$(mmdblookup -f "$GEOIP_DB_PATH" -i "$ip" 2>/dev/null)
         if [[ -n "$geoip_output" ]]; then
-            country=$(echo "$geoip_output" | grep -A 1 '"country".*"iso_code"' | tail -1 | awk '{print $1}' | tr -d '"' || echo "unknown")
-            city=$(echo "$geoip_output" | grep -A 1 '"city".*"names".*"en"' | tail -1 | awk '{print $1}' | tr -d '"' || echo "unknown")
-            lat=$(echo "$geoip_output" | grep -A 1 '"location".*"latitude"' | tail -1 | awk '{print $1}' || echo "0")
-            lon=$(echo "$geoip_output" | grep -A 1 '"location".*"longitude"' | tail -1 | awk '{print $1}' || echo "0")
+            # Extract country code (iso_code under country section)
+            country=$(echo "$geoip_output" | grep -A 5 '"country"' | grep '"iso_code"' | head -1 | awk -F'"' '{print $(NF-1)}' || echo "unknown")
+            
+            # Extract city name (English name under city/names section)
+            city=$(echo "$geoip_output" | grep -A 10 '"city"' | grep -A 5 '"names"' | grep '"en"' | head -1 | awk -F'"' '{print $(NF-1)}' || echo "unknown")
+            
+            # Extract latitude (under location section)
+            lat=$(echo "$geoip_output" | grep -A 5 '"location"' | grep '"latitude"' | head -1 | awk '{print $1}' || echo "0")
+            
+            # Extract longitude (under location section)
+            lon=$(echo "$geoip_output" | grep -A 5 '"location"' | grep '"longitude"' | head -1 | awk '{print $1}' || echo "0")
         fi
     fi
     
